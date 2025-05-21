@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Best online earning platform. Play Games, Casino, Cricket and Make Investment & Earn."
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css"
+      rel="stylesheet"
+    />
+
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>SneakBooker Admin</title>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      charset="UTF-8"
+      href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick.min.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick-theme.min.css"
+    />
+    <style>
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .no-scrollbar {
+        -ms-overflow-style: none; /* Internet Explorer 10+ */
+        scrollbar-width: none; /* Firefox */
+      }
+    </style>
+  </head>
+
+  <body className="no-scrollbar">
+    <div id="root"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
+    <script src="https://unpkg.com/flowbite@1.4.1/dist/flowbite.js"></script>
+    <script>
+      const sidebar = document.querySelector("aside");
+      const maxSidebar = document.querySelector(".max");
+      const miniSidebar = document.querySelector(".mini");
+      const roundout = document.querySelector(".roundout");
+      const maxToolbar = document.querySelector(".max-toolbar");
+      const logo = document.querySelector(".logo");
+      const content = document.querySelector(".content");
+      const moon = document.querySelector(".moon");
+      const sun = document.querySelector(".sun");
+
+      function setDark(val) {
+        if (val === "dark") {
+          document.documentElement.classList.add("dark");
+          moon.classList.add("hidden");
+          sun.classList.remove("hidden");
+        } else {
+          document.documentElement.classList.remove("dark");
+          sun.classList.add("hidden");
+          moon.classList.remove("hidden");
+        }
+      }
+
+      function openNav() {
+        if (sidebar.classList.contains("-translate-x-48")) {
+          // max sidebar
+          sidebar.classList.remove("-translate-x-48");
+          sidebar.classList.add("translate-x-none");
+          maxSidebar.classList.remove("hidden");
+          maxSidebar.classList.add("flex");
+          miniSidebar.classList.remove("flex");
+          miniSidebar.classList.add("hidden");
+          maxToolbar.classList.add("translate-x-0");
+          maxToolbar.classList.remove("translate-x-24", "scale-x-0");
+          logo.classList.remove("ml-12");
+          content.classList.remove("ml-12");
+          content.classList.add("ml-12", "md:ml-60");
+        } else {
+          // mini sidebar
+          sidebar.classList.add("-translate-x-48");
+          sidebar.classList.remove("translate-x-none");
+          maxSidebar.classList.add("hidden");
+          maxSidebar.classList.remove("flex");
+          miniSidebar.classList.add("flex");
+          miniSidebar.classList.remove("hidden");
+          maxToolbar.classList.add("translate-x-24", "scale-x-0");
+          maxToolbar.classList.remove("translate-x-0");
+          logo.classList.add("ml-12");
+          content.classList.remove("ml-12", "md:ml-60");
+          content.classList.add("ml-12");
+        }
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+  </body>
+</html>

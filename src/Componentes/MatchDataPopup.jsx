@@ -5,7 +5,7 @@ const MatchDataPopup = ({ matchData, onClose }) => {
   console.log(matchData);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-4xl p-6 rounded-lg shadow-lg overflow-auto max-h-[90vh]">
+      <div className="bg-white w-full max-w-4xl p-6 rounded-lg shadow-lg overflow-auto max-h-[90vh] animate-flip-down">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">{matchData.title}</h2>
           <button

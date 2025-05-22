@@ -1,26 +1,84 @@
 import React, { useEffect, useState } from "react";
+import AllBets from "./MatchComponents/AllBets";
 import { useLocation } from "react-router-dom";
-import { Loading4 } from "./Loading1";
 import {
+  completeMatch,
   getAllBets,
   getSingleMatchDetail,
+  makeMatchLive,
+  updateMatchTime,
 } from "../Controllers/Admin/AdminController";
-import { toast, ToastContainer } from "react-toastify";
-import { FaFilter } from "react-icons/fa";
-import { MdCancel } from "react-icons/md";
+import { toast } from "react-toastify";
+import { Loading5 } from "./Loading1";
+import SectionList from "./MatchComponents/SectionList";
+import Swal from "sweetalert2";
+import MatchDataPopup from "./MatchDataPopup";
+import MatchResultPopup from "./MactResultPopup";
 
 export default function MatchBetsDetails() {
-  const [loading, setLoading] = React.useState(true);
-  const [bets, setBets] = React.useState([]);
   const [matchDetails, setMatchDetails] = React.useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
-  const [showTable, setShowTable] = useState(false);
-  const [popupData, setPopupData] = useState([]);
-  const [viewTeam, setViewTeam] = useState(false);
+  const [bets, setBets] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  const [isView, setView] = useState(false);
+  const [viewData, setViewData] = useState({});
+
+  const [showPopup, setShowPopup] = useState(false);
+  const [dropdownOptions, setDropDownOptions] = useState({});
+
+  const [updatePopup, setUpdatePopup] = useState(false);
+  const [match_id, setMatchId] = useState("");
+  const [matchTime, setMatchTime] = useState("");
 
   const location = useLocation();
   const matchId = location.state.matchId;
+
+  // update match time
+  const openUpdatePopup = (id) => {
+    setUpdatePopup(true);
+    setMatchId(id);
+  };
+  const updateMatchTimeFunction = async (e) => {
+    e.preventDefault();
+
+    const selectedTime = new Date(matchTime);
+    const now = new Date();
+
+    if (selectedTime < now) {
+      Swal.fire(
+        "Invalid Date",
+        "The match time cannot be in the past.",
+        "error"
+      );
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you really want to change Time?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes!",
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        await updateMatchTime(match_id, matchTime);
+        Swal.fire("Success!", "The match time has been updated.", "success");
+        setMatchId("");
+        setMatchTime("");
+        setUpdatePopup(false);
+      } catch (error) {
+        Swal.fire("Error", `${error?.response?.data?.message}`, "error");
+      } finally {
+        betsShowFunction(matchId);
+        setLoading(false);
+      }
+    }
+  };
 
   const betsShowFunction = async (id) => {
     try {
@@ -36,554 +94,270 @@ export default function MatchBetsDetails() {
     }
   };
 
-  // Sort function to sort the data based on a column
-  const sortData = (data) => {
-    const { key, direction } = sortConfig;
-    return [...data].sort((a, b) => {
-      if (a[key] < b[key]) {
-        return direction === "asc" ? -1 : 1;
-      }
-      if (a[key] > b[key]) {
-        return direction === "asc" ? 1 : -1;
-      }
-      return 0;
+  // handle match live
+  const changeMatchStatus = async (id, status, betting) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `Do you want to make this change?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes!",
     });
+
+    if (result.isConfirmed) {
+      try {
+        await makeMatchLive(id, status, betting);
+        await Swal.fire("LIVE!", `Match status changed`, "success");
+      } catch (error) {
+        toast.error(error?.response?.data?.message || "Internal Server Error!");
+      } finally {
+        betsShowFunction(matchId);
+      }
+    }
   };
 
-  // Handle column header click for sorting
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
+  const completeMatchFunction = async (id) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you really want to complete this match?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes !",
+    });
+
+    if (result.isConfirmed) {
+      setLoading(true);
+      try {
+        await completeMatch(id);
+        Swal.fire("Success!", "The match has been completed.", "success");
+      } catch (error) {
+        Swal.fire("Error", `${error?.response?.data?.message}`, "failed");
+      } finally {
+        betsShowFunction(id);
+        setLoading(false);
+      }
     }
-    setSortConfig({ key, direction });
   };
-
-  const filteredBets = bets.filter((item) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      item.user_id.toLowerCase().includes(query) ||
-      item.mobile.toString().toLowerCase().includes(query)
-    );
-  });
-
-  const sortedBets = sortData(filteredBets);
-
-  //   ---------
-  const handleShowData = (team_name) => {
-    setViewTeam(team_name);
-    const filteredBets = bets.filter((item) => item.team_name === team_name);
-    setPopupData(filteredBets);
-    setShowTable(true);
-  };
-
-  const filteredLTypeBets = popupData;
-
-  // Group L-type bets by section
-  const groupedBySection = {};
-  filteredLTypeBets.forEach((item) => {
-    const section = item.section;
-    if (!groupedBySection[section]) {
-      groupedBySection[section] = [];
-    }
-    groupedBySection[section].push(item);
-  });
-
-  // For each section, compute betStats (0 to 9 values)
-  const sectionStats = Object.entries(groupedBySection).map(
-    ([section, bets]) => {
-      // 1. Aggregate total amount per digit (last digit only)
-      const totalBetsPerDigit = Array.from({ length: 10 }, (_, i) => {
-        return bets
-          .filter((item) => Number(item.bet_value) % 10 === i)
-          .reduce((sum, item) => sum + Number(item.amount), 0);
-      });
-
-      // 2. For each result 0–9, calculate loss/profit
-      const betStats = totalBetsPerDigit.map((amountOnDigit, i) => {
-        const lossIfWins = amountOnDigit * 9;
-        const profitIfNotWin = totalBetsPerDigit.reduce((sum, amt, idx) => {
-          return idx !== i ? sum + amt : sum;
-        }, 0);
-        const netOutcome = profitIfNotWin - lossIfWins;
-
-        return {
-          value: i,
-          totalAmount: amountOnDigit,
-          lossIfWins,
-          profitIfNotWin,
-          netOutcome,
-        };
-      });
-
-      const maxAmount = Math.max(...betStats.map((stat) => stat.totalAmount));
-      const totalBets = bets.length;
-
-      const exectRunBets = bets.filter((i) => i.bet_type === "E");
-
-      const groupedBets = exectRunBets.reduce((acc, curr) => {
-        if (acc[curr.bet_value]) {
-          acc[curr.bet_value].amount += parseFloat(curr.amount);
-        } else {
-          acc[curr.bet_value] = {
-            ...curr,
-            amount: parseFloat(curr.amount),
-          };
-        }
-        return acc;
-      }, {});
-
-      const finalExectBets = Object.values(groupedBets).sort(
-        (a, b) => b.amount - a.amount
-      );
-
-      const totalAmountLastDigit = bets
-        .filter((i) => i.bet_type === "L")
-        .reduce((sum, item) => sum + Number(item.amount), 0);
-
-      const totalAmountExactRun = bets
-        .filter((i) => i.bet_type === "E")
-        .reduce((sum, item) => sum + Number(item.amount), 0);
-
-      return {
-        section,
-        betStats,
-        maxAmount,
-        totalBets,
-        totalAmountLastDigit,
-        totalAmountExactRun,
-        finalExectBets,
-      };
-    }
-  );
 
   useEffect(() => {
     betsShowFunction(matchId);
+    const intervalId = setInterval(() => {
+      betsShowFunction(matchId);
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, [matchId]);
 
-  if (!matchId) {
-    return (
-      <div>
-        <p>No Data Found</p>
-      </div>
-    );
-  }
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center ">
-        <Loading4 />
-      </div>
-    );
+    return <Loading5 />;
   }
 
   return (
     <div>
-      <ToastContainer />
-      <p className="text-center text-lg font-semibold text-gray-200">
-        {matchDetails?.teams[0]?.team_name} vs{" "}
-        {matchDetails?.teams[1]?.team_name}
-      </p>
-      <div className="my-6 flex gap-6">
-        <section className="w-80 p-4 rounded backdrop-blur-md bg-white/80 shadow-md">
-          <p className="flex justify-between">
-            Total Bets : <span>{bets?.length}</span>
+      <nav className="w-full rounded border-2 p-6 border-gray-900 mb-6 flex bg-black justify-between">
+        <p className="  text-lg font-semibold text-gray-200">
+          {matchDetails?.teams[0]?.team_name} vs{" "}
+          {matchDetails?.teams[1]?.team_name}{" "}
+          <span className="text-xs font-medium ml-4 rounded-full px-4 py-0.5 bg-red-500 uppercase">
+            {matchDetails.status === "UC"
+              ? "Upcoming"
+              : matchDetails.status === "LIVE"
+              ? "LIVE"
+              : matchDetails.status === "C"
+              ? "Completed"
+              : ""}
+          </span>
+          <br />{" "}
+          <p className="text-sm">
+            Time :-{" "}
+            {new Date(matchDetails?.match_time).toLocaleString("en-IN", {
+              timeZone: "Asia/Kolkata",
+              weekday: "short",
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: true,
+            })}{" "}
+            {(matchDetails.status === "LIVE" ||
+              matchDetails.status === "UC") && (
+              <span className="text-xs font-medium ml-4 rounded-full px-4 py-0.5 bg-yellow-500 uppercase">
+                <button onClick={() => openUpdatePopup(matchDetails.id)}>
+                  Change Date
+                </button>
+              </span>
+            )}
           </p>
-          <p className="flex justify-between">
-            Total Bet Amount :
-            <span>
-              ₹ {bets?.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)}
-            </span>
-          </p>
-          <p className="flex justify-between">
-            Winning Amount :
-            <span>
-              ₹
-              {bets?.reduce(
-                (acc, curr) => acc + Number(curr.win_amount || 0),
-                0
-              )}
-            </span>
-          </p>
-          <p className="flex justify-between mt-4 border-t font-medium">
-            Profit/Loss:
-            <span
+        </p>
+        {matchDetails.status === "C" && (
+          <div className="p-2 items-center justify-center px-4 rounded border shadow text-gray-200 flex gap-6 bg-gradient-to-r from-violet-600 to-indigo-600">
+            <p>
+              Stake: ₹
+              {bets
+                .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+                .toLocaleString()}
+            </p>
+
+            <p
               className={
-                bets?.reduce((acc, curr) => acc + Number(curr.amount || 0), 0) -
-                  bets?.reduce(
-                    (acc, curr) => acc + Number(curr.win_amount || 0),
-                    0
-                  ) >=
-                0
-                  ? "text-[#51bd45]"
-                  : "text-red-600"
+                bets.reduce(
+                  (sum, item) => sum + Number(item.win_amount || 0),
+                  0
+                ) > 0
+                  ? "text-green-500"
+                  : "text-red-500"
               }
             >
-              {(() => {
-                const winTotal = bets?.reduce(
-                  (acc, curr) => acc + Number(curr.amount || 0),
-                  0
-                );
-                const betTotal = bets?.reduce(
-                  (acc, curr) => acc + Number(curr.win_amount || 0),
-                  0
-                );
-                const profitLoss = winTotal - betTotal;
-                const sign = profitLoss >= 0 ? "+" : "-";
-                return `${sign} ₹${Math.abs(profitLoss).toFixed(2)}`;
-              })()}
-            </span>
-          </p>
-        </section>
-
-        {/* team one */}
-        <section className="w-80 p-4 rounded backdrop-blur-md bg-white/80 shadow-md">
-          <h1 className="font-semibold italic text-[#7c00ff] mb-2 underline">
-            {matchDetails?.teams[0]?.team_name}
-          </h1>
-          <p className="flex justify-between">
-            Total Bets :
-            <span>
-              {
-                bets?.filter(
-                  (i) => i.team_name === matchDetails?.teams[0]?.team_name
-                ).length
-              }
-            </span>
-          </p>
-          <p className="flex justify-between">
-            Total Bet Amount :
-            <span>
-              ₹
+              P/L: ₹
               {bets
-                ?.filter(
-                  (i) => i.team_name === matchDetails?.teams[0]?.team_name
-                )
-                .reduce((acc, curr) => acc + Number(curr.amount || 0), 0)}
-            </span>
-          </p>
-          <p className="flex justify-between">
-            Winning Amount :
-            <span>
-              ₹
-              {bets
-                ?.filter(
-                  (i) => i.team_name === matchDetails?.teams[0]?.team_name
-                )
-                .reduce((acc, curr) => acc + Number(curr.win_amount || 0), 0)}
-            </span>
-          </p>
-          <p
-            onClick={() => {
-              handleShowData(matchDetails?.teams[0]?.team_name);
-            }}
-            className="text-center  rounded bg-[#4ccbfd] mt-4 text-sm font-medium cursor-pointer py-1"
-          >
-            View
-          </p>
-        </section>
-
-        {/* team 2 */}
-        <section className="w-80 p-4 rounded backdrop-blur-md bg-white/80 shadow-md">
-          <h1 className="font-semibold italic text-[#7c00ff] mb-2 underline">
-            {matchDetails?.teams[1]?.team_name}
-          </h1>
-          <p className="flex justify-between">
-            Total Bets :
-            <span>
-              {
-                bets?.filter(
-                  (i) => i.team_name === matchDetails?.teams[1]?.team_name
-                ).length
-              }
-            </span>
-          </p>
-          <p className="flex justify-between">
-            Total Bet Amount :
-            <span>
-              ₹
-              {bets
-                ?.filter(
-                  (i) => i.team_name === matchDetails?.teams[1]?.team_name
-                )
-                .reduce((acc, curr) => acc + Number(curr.amount || 0), 0)}
-            </span>
-          </p>
-          <p className="flex justify-between">
-            Winning Amount :
-            <span>
-              ₹
-              {bets
-                ?.filter(
-                  (i) => i.team_name === matchDetails?.teams[1]?.team_name
-                )
-                .reduce((acc, curr) => acc + Number(curr.win_amount || 0), 0)}
-            </span>
-          </p>
-          <p
-            onClick={() => {
-              handleShowData(matchDetails?.teams[1]?.team_name);
-            }}
-            className="text-center  rounded bg-[#4ccbfd] mt-4 text-sm font-medium cursor-pointer py-1"
-          >
-            View
-          </p>
-        </section>
-      </div>
-
-      <div className="flex w-full justify-end">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search..."
-          className="w-60 p-2 mb-3 border border-gray-200 rounded-md  "
-        />
-      </div>
-      <div className="overflow-x-auto  ">
-        <table className="min-w-full text-sm text-left border border-gray-600">
-          <thead className="bg-indigo-500 text-xs uppercase font-semibold text-gray-100">
-            <tr>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("id")}
-              >
-                <p className="flex gap-1 items-center">
-                  ID
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("match_id")}
-              >
-                <p className="flex gap-1 items-center">
-                  Match ID
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("user_id")}
-              >
-                <p className="flex gap-1 items-center">
-                  User ID
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("mobile")}
-              >
-                <p className="flex gap-1 items-center">
-                  Mobile
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("team_name")}
-              >
-                <p className="flex gap-1 items-center">
-                  Team
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("bet_type")}
-              >
-                <p className="flex gap-1 items-center">
-                  Bet Type
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("bet_value")}
-              >
-                <p className="flex gap-1 items-center">
-                  Bet Value
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("amount")}
-              >
-                <p className="flex gap-1 items-center">
-                  Amount
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("win_amount")}
-              >
-                <p className="flex gap-1 items-center">
-                  Win Amount
-                  <FaFilter />
-                </p>
-              </th>
-              <th
-                className="px-4 py-3 cursor-pointer"
-                onClick={() => handleSort("section")}
-              >
-                <p className="flex gap-1 items-center">
-                  Section
-                  <FaFilter />
-                </p>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-500">
-            {sortedBets.length === 0 ? (
-              <p className="text-xl font-bold text-gray-200 py-10 text-center">
-                No Bet Yet
-              </p>
-            ) : (
-              sortedBets.map((bet) => (
-                <tr
-                  key={bet.id}
-                  className="hover:bg-gray-50 hover:text-gray-900 cursor-pointer text-gray-200"
-                >
-                  <td className="px-4 py-3">{bet.id}</td>
-                  <td className="px-4 py-3">{bet.match_id}</td>
-                  <td className="px-4 py-3">{bet.user_id}</td>
-                  <td className="px-4 py-3">{bet.mobile}</td>
-                  <td className="px-4 py-3">{bet.team_name}</td>
-                  <td className="px-4 py-3">
-                    {bet.bet_type === "L" ? "Last Digit" : "Exect Run"}
-                  </td>
-                  <td className="px-4 py-3">{bet.bet_value}</td>
-                  <td className="px-4 py-3">₹ {bet.amount}</td>
-                  <td className="px-4 py-3">₹ {bet.win_amount || "-"}</td>
-                  <td className="px-4 py-3">{bet.section}th Over</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {showTable && (
-        <div className="fixed top-0 left-0 w-screen h-screen backdrop-blur-md bg-black/50 z-[99] flex flex-col justify-center items-center">
-          <div className="p-6 max-w-5xl rounded-lg overflow-auto bg-white animate-flip-down">
-            <div className="flex justify-between">
-              <p className="mb-6 font-semibold text-lg">{viewTeam}</p>{" "}
-              <MdCancel
-                className="cursor-pointer"
-                onClick={() => {
-                  setShowTable(false);
-                  setViewTeam("");
-                }}
-                size={22}
-              />
-            </div>
-            {sectionStats.length === 0 ? (
-              <p className="text-xl font-bold text-gray-800 py-10 px-10 text-center">
-                No Bet Yet
-              </p>
-            ) : (
-              sectionStats.map(
-                ({
-                  section,
-                  betStats,
-                  maxAmount,
-                  totalBets,
-                  totalAmountLastDigit,
-                  totalAmountExactRun,
-                  finalExectBets,
-                }) => (
-                  <div className="mb-6">
-                    <section
-                      key={section}
-                      className="  border-2 border-indigo-500 shadow-md rounded-lg overflow-hidden bg-indigo-50"
-                    >
-                      {/* Section header with totals */}
-                      <div className="flex gap-6 items-center p-4 bg-indigo-200 font-semibold text-sm">
-                        <p>Section: {section}</p>
-                        <p>Total Bets: {totalBets}</p>
-                        <p> Last Digit: ₹ {totalAmountLastDigit}</p>
-                        <p> Exact Run: ₹ {totalAmountExactRun}</p>
-                      </div>
-
-                      <div className="flex gap-4 justify-between">
-                        {/* Left-side header */}
-                        <div className="font-medium shadow text-center bg-indigo-500">
-                          Over <br />
-                          <div className="p-4 text-left bg-white">
-                            Bets: <br /> Amount:
-                          </div>
-                        </div>
-
-                        {/* Stats grid */}
-                        <div className="flex overflow-auto">
-                          {betStats.map((stat) => {
-                            const isHighest =
-                              stat.totalAmount === maxAmount && maxAmount > 0;
-
-                            return (
-                              <div
-                                key={stat.value}
-                                className={`border border-y-0 border-gray-600 text-center min-w-[80px] ${
-                                  isHighest ? "bg-green-400" : ""
-                                }`}
-                              >
-                                <p className="bg-black text-gray-100">
-                                  {stat.value}
-                                </p>
-                                <div className="p-4">
-                                  <p className="text-[#138737] font-medium text-lg">
-                                    ₹ {stat.totalAmount}
-                                  </p>
-                                  <p className="text-red-600 text-sm font-semibold ">
-                                    {/* Loss  :  */}
-                                   L ₹ {stat.lossIfWins}
-                                  </p>
-                                  <p className="text-blue-600 text-sm font-semibold ">
-                                    {/* Profit  : */}
-                                    P ₹ {stat.profitIfNotWin}
-                                  </p>
-                                  <p
-                                    className={`text-sm font-bold ${
-                                      stat.netOutcome < 0
-                                        ? "text-red-700"
-                                        : "text-green-700"
-                                    }`}
-                                  >
-                                    Net Outcome: ₹ {stat.netOutcome}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </section>
-                    <div className="flex">
-                      <p>Exect Run Bets</p>
-                      <div className="flex overflow-auto">
-                        {finalExectBets.map((item) => (
-                          <div
-                            key={item.bet_value}
-                            className="border border-gray-600 text-center min-w-[80px]"
-                          >
-                            <p className="bg-[#ff4747] text-gray-100">
-                              {item.bet_value} Runs
-                            </p>
-                            <div>
-                              <p>Rs.{item.amount}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )
-              )
-            )}
+                .reduce((sum, item) => sum + Number(item.win_amount || 0), 0)
+                .toLocaleString()}
+            </p>
           </div>
+        )}
+        <div className="flex gap-4">
+          <button>
+            {matchDetails.status === "UC" ? (
+              matchDetails.can_place_bet === "N" ? (
+                <button
+                  onClick={() => changeMatchStatus(matchDetails.id, "UC", "Y")}
+                  className="btn"
+                >
+                  Start Betting
+                </button>
+              ) : (
+                <button
+                  onClick={() => changeMatchStatus(matchDetails.id, "UC", "N")}
+                  className="btn"
+                >
+                  Stop Betting
+                </button>
+              )
+            ) : (
+              "Match Completed Or Live"
+            )}
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              setView(true);
+              setViewData(matchDetails);
+            }}
+            size={18}
+          >
+            DETAILS
+          </button>
+
+          {matchDetails.status === "UC" && (
+            <button
+              className="btn"
+              onClick={() => changeMatchStatus(matchDetails.id, "LIVE", "N")}
+            >
+              MAKE LIVE
+            </button>
+          )}
+
+          {matchDetails.status === "LIVE" && (
+            <button
+              className="btn"
+              onClick={() => completeMatchFunction(matchDetails.id)}
+            >
+              COMPLETE MATCH
+            </button>
+          )}
+          {matchDetails.status === "LIVE" && (
+            <button
+              className="btn"
+              onClick={() => {
+                setShowPopup(true);
+                setDropDownOptions(matchDetails);
+              }}
+            >
+              UPLOAD RESULT
+            </button>
+          )}
+        </div>
+      </nav>
+      <div className="grid grid-cols-2 grid-rows-2 gap-4">
+        <section className="p-6 shadow rounded border-2 bg-gray-900 shadow border-black min-h-[40vh] max-h-[40vh] overflow-auto ">
+          <SectionList
+            betsDetails={bets}
+            team_name={matchDetails?.teams[0]?.team_name}
+          />
+        </section>
+        <section className="p-6 shadow rounded border-2 bg-gray-900 shadow border-black min-h-[40vh] max-h-[40vh] overflow-auto ">
+          <SectionList
+            betsDetails={bets}
+            team_name={matchDetails?.teams[1]?.team_name}
+          />
+        </section>
+        <section className="px-6 py-2 shadow rounded border-2 bg-gray-900 shadow border-black min-h-[40vh] max-h-[40vh] overflow-auto no-scrollbar ">
+          <AllBets bets={bets} team_name={matchDetails?.teams[0]?.team_name} />
+        </section>
+        <section className="px-6 py-2 shadow rounded border-2 bg-gray-900 shadow  border-black min-h-[40vh] max-h-[40vh] overflow-auto no-scrollbar ">
+          <AllBets bets={bets} team_name={matchDetails?.teams[1]?.team_name} />
+        </section>
+      </div>
+
+      {isView && (
+        <MatchDataPopup
+          matchData={viewData}
+          onClose={() => {
+            setView(false);
+            setViewData({});
+            betsShowFunction(matchId);
+          }}
+        />
+      )}
+
+      {showPopup && (
+        <MatchResultPopup
+          options={dropdownOptions}
+          onClose={() => {
+            setShowPopup(false);
+            setDropDownOptions([]);
+            betsShowFunction(matchId);
+          }}
+        />
+      )}
+
+      {updatePopup && (
+        <div className="fixed top-0 left-0 w-screen h-screen backdrop-blur-md bg-black/50 flex justify-center items-center">
+          <form
+            onSubmit={(e) => updateMatchTimeFunction(e)}
+            className="p-4 rounded bg-white w-80 h-80 flex flex-col justify-center items-center"
+          >
+            <input
+              type="datetime-local"
+              value={matchTime}
+              onChange={(e) => setMatchTime(e.target.value)}
+              placeholder="Enter Match Time"
+              min={new Date().toISOString().slice(0, 16)} // sets minimum date/time to current
+              className="w-full px-4 py-2 border bg-indigo-100 border-gray-300 rounded-md focus:outline-none bg-gray-400 focus:ring-2 focus:ring-indigo-600"
+              required
+            />
+
+            <div className="flex w-full justify-between">
+              <button
+                type="submit"
+                className=" w-[48%] py-1 rounded mt-4 bg-indigo-500 font-semibold  text-gray-100"
+              >
+                UPDATE
+              </button>
+              <button
+                onClick={() => setUpdatePopup(false)}
+                className=" w-[48%] py-1 rounded mt-4 bg-red-500 font-semibold  text-gray-100"
+              >
+                CANCEL
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

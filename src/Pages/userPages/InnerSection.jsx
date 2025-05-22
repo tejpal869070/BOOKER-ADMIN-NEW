@@ -10,6 +10,7 @@ import Dashboard from "../Dashboard";
 import Users from "../../Componentes/Users";
 import UserDetails from "../../Componentes/UserDetails";
 import MatchBetsDetails from "../../Componentes/MatchBetsDetails";
+import Quiz from "../quiz";
 
 export default function InnerSection() {
   const location = useLocation();
@@ -39,6 +40,8 @@ export default function InnerSection() {
     return <div>{<Users />}</div>;
   } else if (paramsData && paramsData.admin === "userdetails") {
     return <div>{<UserDetails />}</div>;
+  } else if (paramsData && paramsData.admin === "quiz") {
+    return <div>{<Quiz />}</div>;
   } else {
     return <Dashboard />;
   }

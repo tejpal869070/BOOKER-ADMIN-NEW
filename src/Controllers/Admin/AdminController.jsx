@@ -116,7 +116,7 @@ export const updateMatchResult = async (
 export const deleteMatch = async (id) => {
   const response = await axios.post(`${API.url}/admin/delete-match`, {
     id,
-  });
+  }); 
   return response;
 };
 

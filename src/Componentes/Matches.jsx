@@ -337,13 +337,8 @@ export default function Matches() {
                     className="cursor-pointer text-red-700"
                     onClick={() => handleRemoveMatch(item.id)}
                   />
-                  {item.status === "LIVE" ? (
-                    <button
-                      onClick={() => completeMatchFunction(item.id)}
-                      className="ml-2 px-2 py-1 bg-red-600 font-semibold text-gray-200 text-xs rounded"
-                    >
-                      COMPLETE MATCH
-                    </button>
+                  {/* {item.status === "LIVE" ? (
+                    ""
                   ) : item.status === "UC" ? (
                     <button
                       onClick={() => changeMatchStatus(item.id, "LIVE", "N")}
@@ -353,9 +348,9 @@ export default function Matches() {
                     </button>
                   ) : (
                     ""
-                  )}
+                  )} */}
 
-                  {item.status === "LIVE" && (
+                  {/* {item.status === "LIVE" && (
                     <button
                       onClick={() => {
                         setShowPopup(true);
@@ -365,7 +360,7 @@ export default function Matches() {
                     >
                       UPLOAD RESULTS
                     </button>
-                  )}
+                  )} */}
                   <Link
                     to={{
                       pathname: "/dashboard",
@@ -376,7 +371,7 @@ export default function Matches() {
 
                     className="ml-2 px-2 py-1 bg-green-600 font-semibold text-gray-200 text-xs rounded"
                   >
-                    BETS
+                    VIEW
                   </Link>
                 </td>
               </tr>

@@ -206,18 +206,17 @@ export default function MatchBetsDetails() {
 
             <p
               className={
-                bets.reduce(
-                  (sum, item) => sum + Number(item.win_amount || 0),
-                  0
-                ) > 0
+                bets.reduce( (sum, item) => sum + Number(item.win_amount || 0), 0 ) < bets.reduce( (sum, item) => sum + Number(item.amount || 0), 0 )
                   ? "text-green-500"
                   : "text-red-500"
               }
             >
               P/L: ₹
-              {bets
-                .reduce((sum, item) => sum + Number(item.win_amount || 0), 0)
-                .toLocaleString()}
+              {bets.reduce((sum, item) => sum + Number(item.amount || 0), 0) -
+                bets.reduce(
+                  (sum, item) => sum + Number(item.win_amount || 0),
+                  0
+                )}
             </p>
           </div>
         )}
